@@ -1,0 +1,242 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Shared Helper Functions
+    // ===============================================================
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isRegistered() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAcademyAdmin(groupId) {
+      return isSignedIn() && (
+        isAdmin() || 
+        request.auth.uid == get(/databases/$(database)/documents/academies/$(groupId)).data.ownerId ||
+        request.auth.uid in get(/databases/$(database)/documents/academies/$(groupId)).data.adminIds
+      );
+    }
+
+    function isGlobalAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email in ["pushpachristy20@gmail.com", "realatronz@gmail.com"] && request.auth.token.email_verified == true
+      );
+    }
+
+    function isAdmin() {
+      // Robust admin check: Global hardcoded + database lookup
+      return isSignedIn() && (
+        isGlobalAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ===============================================================
+    // Entity Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.handle is string && data.handle.size() > 0 && data.handle.size() <= 50 &&
+             data.avatar is string && data.avatar.size() <= 2048 &&
+             data.role in ['admin', 'member', 'guest'] &&
+             (!('bio' in data) || data.bio is string && data.bio.size() <= 500) &&
+             (!('location' in data) || data.location is string && data.location.size() <= 100) &&
+             (!('website' in data) || data.website is string && data.website.size() <= 256) &&
+             (!('cover' in data) || data.cover == null || data.cover is string && data.cover.size() <= 2048) &&
+             (!('followersCount' in data) || data.followersCount is number) &&
+             (!('followingCount' in data) || data.followingCount is number) &&
+             (!('followedCreatorIds' in data) || data.followedCreatorIds is list && data.followedCreatorIds.size() <= 1000) &&
+             (!('isCreator' in data) || data.isCreator is bool) &&
+             (!('isBusiness' in data) || data.isBusiness is bool) &&
+             (!('skills' in data) || data.skills is list && data.skills.size() <= 100) &&
+             (!('category' in data) || data.category is string && data.category.size() <= 100) &&
+             (!('onboardingCompleted' in data) || data.onboardingCompleted is bool);
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['author', 'content', 'timestamp', 'stats']) &&
+             data.author is map &&
+             data.author.id is string && data.author.id.size() <= 128 &&
+             data.author.name is string && data.author.name.size() <= 100 &&
+             data.author.handle is string && data.author.handle.size() <= 50 &&
+             data.author.avatar is string && data.author.avatar.size() <= 2048 &&
+             data.content is string && data.content.size() <= 2000 &&
+             data.stats is map &&
+             data.stats.replies is number &&
+             data.stats.reposts is number &&
+             data.stats.likes is number &&
+             data.stats.views is number &&
+             (!('images' in data) || data.images is list && data.images.size() <= 10) &&
+             (!('poll' in data) || data.poll == null || (
+               data.poll is map &&
+               data.poll.options is list &&
+               data.poll.options.size() >= 2 &&
+               data.poll.options.size() <= 10
+             ));
+    }
+
+    function isValidAcademy(data) {
+      return data.keys().hasAll(['name', 'description', 'members', 'privacy', 'category', 'ownerHandle', 'ownerId', 'membersList']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.description is string && data.description.size() <= 1000 &&
+             data.members is number &&
+             data.privacy in ['public', 'private', 'closed'] &&
+             data.category is string && data.category.size() <= 100 &&
+             data.ownerId is string && data.ownerId == request.auth.uid &&
+             data.membersList is list && data.membersList.size() <= 1000;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['author', 'authorId', 'content', 'createdAt']) &&
+             data.author is string && data.author.size() <= 100 &&
+             data.authorId == request.auth.uid &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.createdAt == request.time;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['type', 'from', 'read', 'createdAt']) &&
+             data.type in ['like', 'reply', 'repost', 'mention', 'follow', 'message'] &&
+             data.from is map &&
+             data.from.id == request.auth.uid &&
+             data.read == false &&
+             data.createdAt == request.time;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn(); // Publicly searchable
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().role != 'admin';
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && (
+        // Action: Standard Update
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'handle', 'avatar', 'bio', 'location', 'website', 'cover', 'followedCreatorIds', 'onboardingCompleted', 'skills', 'category', 'isCreator', 'isBusiness', 'followingCount', 'followersCount', 'id', 'links', 'phone', 'email', 'ownerName', 'description', 'logo', 'district', 'state', 'latitude', 'longitude', 'isBusiness']) 
+        || (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'isAdmin']))
+      ) || (
+        // Action: Stats Update (Other users following)
+        isRegistered() && incoming().diff(existing()).affectedKeys().hasOnly(['followersCount']) &&
+        (incoming().followersCount == existing().followersCount + 1 || incoming().followersCount == existing().followersCount - 1)
+      );
+
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if isRegistered() && isValidNotification(incoming());
+        allow update: if isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+        allow delete: if isOwner(userId);
+      }
+
+      match /fcm_tokens/{tokenId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /posts/{postId} {
+      allow get: if isSignedIn() && isValidId(postId);
+      allow list: if isSignedIn(); // Social feed is public to all signed-in users
+      allow create: if isRegistered() && isValidId(postId) && isValidPost(incoming()) && incoming().author.id == request.auth.uid && incoming().timestamp == request.time;
+      allow update: if isRegistered() && (
+        (isOwner(existing().author.id) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'images', 'poll'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['stats', 'isLiked', 'isReposted']) && 
+         incoming().stats.keys().hasOnly(['likes', 'reposts', 'views', 'replies', 'liveViews']))
+      );
+      allow delete: if isAdmin() || isOwner(existing().author.id);
+
+      match /replies/{replyId} {
+        allow read: if isSignedIn();
+        allow create: if isRegistered() && incoming().authorId == request.auth.uid;
+        allow delete: if isAdmin() || isOwner(existing().authorId);
+      }
+    }
+
+    match /academies/{groupId} {
+      allow get: if isSignedIn() && isValidId(groupId);
+      allow list: if isSignedIn(); // Academies are discoverable
+      allow create: if isRegistered() && isValidId(groupId) && isValidAcademy(incoming()) && incoming().createdAt == request.time;
+      allow update: if isRegistered() && (
+        (isOwner(existing().ownerId) && isValidAcademy(incoming())) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['members', 'membersList']) && 
+         (incoming().members == existing().members + 1 || incoming().members == existing().members - 1)) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['typing']))
+      );
+      allow delete: if isAdmin() || isOwner(existing().ownerId);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isRegistered() && isValidMessage(incoming());
+        allow update: if isRegistered() && (
+          (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'isEdited'])) ||
+          (incoming().diff(existing()).affectedKeys().hasOnly(['reactions']))
+        );
+        allow delete: if isAdmin() || isOwner(existing().authorId);
+      }
+
+      match /joinRequests/{requestId} {
+        allow get: if isRegistered() && (isOwner(requestId) || isAcademyAdmin(groupId));
+        allow list: if isRegistered() && (
+          resource.data.userId == request.auth.uid || 
+          resource.data.academyOwnerId == request.auth.uid ||
+          isOwner(requestId) || 
+          isGlobalAdmin()
+        ); 
+        allow create: if isRegistered() && isOwner(requestId) && incoming().userId == request.auth.uid;
+        allow delete: if isRegistered() && (isOwner(requestId) || isAcademyAdmin(groupId));
+      }
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isRegistered() && incoming().userId == request.auth.uid && incoming().createdAt == request.time;
+    }
+
+    match /direct_messages/{conversationId} {
+      allow read: if isSignedIn() && conversationId.contains(request.auth.uid);
+      allow write: if isRegistered() && conversationId.contains(request.auth.uid);
+      
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && conversationId.contains(request.auth.uid);
+        allow create: if isRegistered() && conversationId.contains(request.auth.uid) && isValidMessage(incoming());
+        allow delete: if isOwner(existing().authorId);
+      }
+    }
+
+    match /channels/{channelId}/messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isRegistered() && isValidMessage(incoming());
+      allow delete: if isAdmin() || isOwner(existing().authorId);
+    }
+
+    match /{path=**}/joinRequests/{requestId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

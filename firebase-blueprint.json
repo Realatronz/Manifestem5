@@ -1,0 +1,232 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the platform",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Display name" },
+        "handle": { "type": "string", "description": "Unique handle" },
+        "avatar": { "type": "string", "description": "Avatar URL" },
+        "isAdmin": { "type": "boolean", "description": "Admin status" },
+        "role": { "type": "string", "enum": ["admin", "member", "guest"] },
+        "bio": { "type": "string" },
+        "location": { "type": "string" },
+        "website": { "type": "string" },
+        "cover": { "type": "string" },
+        "followersCount": { "type": "number" },
+        "followingCount": { "type": "number" },
+        "followedCreatorIds": { "type": "array", "items": { "type": "string" } },
+        "isCreator": { "type": "boolean" },
+        "isBusiness": { "type": "boolean" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "links": {
+          "type": "object",
+          "properties": {
+            "github": { "type": "string" },
+            "twitter": { "type": "string" },
+            "instagram": { "type": "string" },
+            "website": { "type": "string" }
+          }
+        },
+        "category": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "description": { "type": "string" },
+        "logo": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "state": { "type": "string" },
+        "district": { "type": "string" },
+        "hourlyRate": { "type": "number" },
+        "onboardingCompleted": { "type": "boolean", "description": "Whether the user has completed the onboarding flow" }
+      },
+      "required": ["name", "handle", "avatar", "role"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A post in the feed",
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "handle": { "type": "string" },
+            "avatar": { "type": "string" },
+            "isAdmin": { "type": "boolean" }
+          }
+        },
+        "content": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "voiceNote": { "type": "string" },
+        "poll": {
+          "type": "object",
+          "properties": {
+            "options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string" },
+                  "votes": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            },
+            "expiresAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "replies": { "type": "number" },
+            "reposts": { "type": "number" },
+            "likes": { "type": "number" },
+            "views": { "type": "number" },
+            "liveViews": { "type": "number" }
+          }
+        },
+        "isLiked": { "type": "boolean" },
+        "isReposted": { "type": "boolean" }
+      },
+      "required": ["author", "content", "timestamp", "stats"]
+    },
+    "Academy": {
+      "title": "Academy",
+      "description": "An educational academy",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "members": { "type": "number" },
+        "privacy": { "type": "string", "enum": ["public", "private", "closed"] },
+        "coverImage": { "type": "string" },
+        "category": { "type": "string" },
+        "ownerHandle": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "rules": { "type": "string", "description": "Academy rules" },
+        "membersList": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "handle": { "type": "string" },
+              "role": { "type": "string", "enum": ["admin", "member"] },
+              "avatar": { "type": "string" }
+            }
+          }
+        },
+        "typing": { "type": "object", "description": "Map of user IDs to typing status (name and timestamp)" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "description", "members", "privacy", "category", "ownerHandle", "ownerId", "membersList"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message in a group chat",
+      "type": "object",
+      "properties": {
+        "author": { "type": "string" },
+        "authorId": { "type": "string" },
+        "initials": { "type": "string" },
+        "content": { "type": "string" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string" },
+        "replyTo": { "type": "string" },
+        "replyContent": { "type": "string" },
+        "reactions": { "type": "object" },
+        "isEdited": { "type": "boolean" }
+      },
+      "required": ["author", "authorId", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "An in-app notification",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["like", "reply", "repost", "mention", "follow", "message"] },
+        "from": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "avatar": { "type": "string" }
+          }
+        },
+        "postId": { "type": "string" },
+        "content": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "from", "read", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback and ratings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userHandle": { "type": "string" },
+        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+        "comment": { "type": "string" },
+        "category": { "type": "string", "enum": ["feature", "bug", "design", "other"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "rating", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "In-app notifications for a user"
+    },
+    "/users/{userId}/fcm_tokens/{tokenId}": {
+      "schema": "object",
+      "description": "FCM tokens for push notifications"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "User feedback submissions"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Post documents"
+    },
+    "/posts/{postId}/replies/{replyId}": {
+      "schema": "object",
+      "description": "Replies to a post (if implemented as subcollection)"
+    },
+    "/academies/{groupId}": {
+      "schema": "Academy",
+      "description": "Academy documents"
+    },
+    "/academies/{groupId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages in an academy"
+    },
+    "/academies/{groupId}/joinRequests/{requestId}": {
+      "schema": "object",
+      "description": "Join requests for an academy"
+    },
+    "/channels/{channelId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages in a public channel"
+    },
+    "/direct_messages/{conversationId}": {
+      "schema": "object",
+      "description": "Direct message conversation metadata, including typing status"
+    },
+    "/direct_messages/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages in a direct conversation"
+    }
+  }
+}

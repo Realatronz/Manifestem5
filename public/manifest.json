@@ -1,0 +1,17 @@
+{
+  "name": "Mark 1 Academy",
+  "short_name": "Mark 1",
+  "description": "A world-class educational platform for modern academies.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

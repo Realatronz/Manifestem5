@@ -1,0 +1,9 @@
+{
+  "name": "Remix: Remix: Mark 1",
+  "description": "A world-class creative and business engineering platform with glassmorphic UI, real-time collaboration, guided onboarding, and PWA support.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera",
+    "geolocation"
+  ]
+}

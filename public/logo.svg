@@ -1,0 +1,31 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mountGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+    <filter id="sticker-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#sticker-shadow)">
+    <!-- White Sticker Border/Base -->
+    <path d="M15 80 L40 20 L50 50 L60 20 L85 80 L75 80 L60 40 L50 70 L40 40 L25 80 Z" 
+          fill="white" stroke="white" stroke-width="8" stroke-linejoin="round" />
+    
+    <!-- Main Mountain M Shape -->
+    <path d="M18 78 L40 24 L50 52 L60 24 L82 78 L74 78 L60 42 L50 72 L40 42 L26 78 Z" 
+          fill="url(#mountGradient)" stroke="#082f49" stroke-width="1.5" stroke-linejoin="round" />
+    
+    <!-- Snow Caps -->
+    <path d="M40 24 L32 38 C38 34 42 34 48 38 L40 24 Z" fill="white" stroke-linejoin="round" />
+    <path d="M60 24 L52 38 C58 34 62 34 68 38 L60 24 Z" fill="white" stroke-linejoin="round" />
+
+    <!-- Flag Pole -->
+    <rect x="60" y="8" width="1.5" height="18" fill="#082f49" rx="0.5" />
+    
+    <!-- Flag -->
+    <path d="M61.5 8 C70 8 75 12 85 13 C75 14 70 18 61.5 18 Z" fill="#0369a1" stroke="#082f49" stroke-width="0.5" />
+  </g>
+</svg>
